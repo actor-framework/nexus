@@ -20,12 +20,31 @@
 #ifndef CAF_NEXUS_NEXUS_HPP
 #define CAF_NEXUS_NEXUS_HPP
 
+#include <map>
+
 #include "caf/all.hpp"
+#include "caf/probe_event/all.hpp"
 
 namespace caf {
 namespace nexus {
 
-behavior nexus(event_based_actor* self);
+class nexus : public probe_event::nexus_type::base {
+ public:
+  behavior_type make_behavior() override;
+
+ private:
+  void broadcast();
+  void add_listener(probe_event::sink hdl);
+  struct probe_data {
+    probe_event::node_info node;
+    optional<probe_event::ram_usage> ram;
+    optional<probe_event::work_load> load;
+    std::set<node_id> direct_routes;
+
+  };
+  std::map<actor_addr, probe_data> m_data;
+  std::set<probe_event::sink> m_listeners;
+};
 
 } // namespace nexus
 } // namespace caf

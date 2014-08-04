@@ -17,11 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <iostream>
+
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 #include "caf/nexus/nexus.hpp"
 
 int main(int argc, char** argv) {
-  auto nexus = caf::spawn(caf::nexus::nexus);
+  if (argc < 2) {
+    std::cerr << "usage: nexus PORT" << std::endl;
+    return 1;
+  }
+  auto port = std::stoi(argv[1]);
+  auto nexus = caf::spawn_typed<caf::nexus::nexus>();
+  caf::io::typed_publish(nexus, static_cast<uint16_t>(port));
   caf::await_all_actors_done();
   caf::shutdown();
 }
