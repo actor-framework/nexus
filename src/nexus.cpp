@@ -79,13 +79,18 @@ nexus::behavior_type nexus::make_behavior() {
     [=](const probe_event::route_lost& route) {
       CHECK_SENDER(probe_event::new_route);
       if (m_data[last_sender()].direct_routes.erase(route.to) > 0) {
+        std::cout << "new route" << std::endl;
         broadcast();
       }
     },
     [=](const probe_event::new_message&) {
-      // TODO: implement me
+      // TODO: reduce message size by avoiding the complete msg
+      CHECK_SENDER(probe_event::new_message);
+      std::cout << "new message" << std::endl;
+      broadcast();
     },
     [=](const probe_event::add_listener& req) {
+      std::cout << "new listerner" << std::endl;
       add_listener(actor_cast<probe_event::sink>(req.listener));
     },
     [=](const probe_event::add_typed_listener& req) {
