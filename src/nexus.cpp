@@ -46,7 +46,7 @@ namespace nexus {
 void nexus::broadcast() {
   for (auto& l : m_listeners) {
     // we now for sure that l can handle last_dequeued()
-    send(actor_cast<actor>(l), last_dequeued());
+    send(actor_cast<actor>(l), last_sender(), last_dequeued());
   }
 }
 
