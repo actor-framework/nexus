@@ -33,7 +33,13 @@ class nexus : public probe_event::nexus_type::base {
   behavior_type make_behavior() override;
 
  private:
-  void broadcast();
+  template<typename Data>
+  void broadcast(const Data& data) {
+    for (auto& l : m_listeners) {
+      // we now for sure that l can handle last_dequeued()
+      send(actor_cast<actor>(l), last_sender().node(), data);
+    }
+  }
   void add_listener(probe_event::sink hdl);
   struct probe_data {
     probe_event::node_info node;

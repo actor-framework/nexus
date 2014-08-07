@@ -37,18 +37,11 @@
       return;                                                                  \
     }                                                                          \
     m_data[last_sender()].FieldName = FieldName;                               \
-    broadcast();                                                               \
+    broadcast(FieldName);                                                               \
   }
 
 namespace caf {
 namespace nexus {
-
-void nexus::broadcast() {
-  for (auto& l : m_listeners) {
-    // we now for sure that l can handle last_dequeued()
-    send(actor_cast<actor>(l), last_sender(), last_dequeued());
-  }
-}
 
 void nexus::add_listener(probe_event::sink hdl) {
   if (m_listeners.insert(hdl).second) {
@@ -73,24 +66,24 @@ nexus::behavior_type nexus::make_behavior() {
       CHECK_SENDER(probe_event::new_route);
       if (route.is_direct
           && m_data[last_sender()].direct_routes.insert(route.to).second) {
-        broadcast();
+        broadcast(route);
       }
     },
     [=](const probe_event::route_lost& route) {
       CHECK_SENDER(probe_event::new_route);
       if (m_data[last_sender()].direct_routes.erase(route.to) > 0) {
         std::cout << "new route" << std::endl;
-        broadcast();
+        broadcast(route);
       }
     },
-    [=](const probe_event::new_message&) {
+    [=](const probe_event::new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
       CHECK_SENDER(probe_event::new_message);
       std::cout << "new message" << std::endl;
-      broadcast();
+      broadcast(msg);
     },
     [=](const probe_event::add_listener& req) {
-      std::cout << "new listerner" << std::endl;
+      //std::cout << "new listerner" << std::endl;
       add_listener(actor_cast<probe_event::sink>(req.listener));
     },
     [=](const probe_event::add_typed_listener& req) {
