@@ -31,13 +31,13 @@
 
 #define HANDLE_UPDATE(TypeName, FieldName)                                     \
   [=](const TypeName& FieldName) {                                             \
-    if (!last_sender()) {                                                      \
+    if (FieldName.source_node == caf::invalid_node_id) {                       \
       std::cerr << #TypeName << " received from an invalid sender"             \
                 << std::endl;                                                  \
       return;                                                                  \
     }                                                                          \
     m_data[last_sender()].FieldName = FieldName;                               \
-    broadcast(FieldName);                                                               \
+    broadcast(FieldName);                                                      \
   }
 
 namespace caf {
@@ -51,7 +51,7 @@ void nexus::add_listener(probe_event::sink hdl) {
       auto& data = kvp.second;
       send(hdl, data.node);
       for (auto& route : data.direct_routes) {
-        send(hdl, probe_event::new_route{data.node.id, route, true});
+        send(hdl, probe_event::new_route{data.node.source_node, route, true});
       }
     }
   }
@@ -88,7 +88,16 @@ nexus::behavior_type nexus::make_behavior() {
     },
     [=](const probe_event::add_typed_listener& req) {
       add_listener(req.listener);
+    },
+    /*
+    [=](const down_msg& dm) {
+      if (m_listeners.erase(actor_cast<probe_event::sink>(dm.source)) == 0) {
+        // if it wasn't a listener, it must've been one of our nodes
+        // TODO: tell clients about disconnect
+        m_data.erase(dm.source);
+      }
     }
+    */
   };
 }
 
