@@ -51,7 +51,7 @@ void nexus::add_listener(probe_event::sink hdl) {
       auto& data = kvp.second;
       send(hdl, data.node);
       for (auto& route : data.direct_routes) {
-        send(hdl, probe_event::new_route{route, true});
+        send(hdl, probe_event::new_route{data.node.id, route, true});
       }
     }
   }
@@ -65,13 +65,13 @@ nexus::behavior_type nexus::make_behavior() {
     [=](const probe_event::new_route& route) {
       CHECK_SENDER(probe_event::new_route);
       if (route.is_direct
-          && m_data[last_sender()].direct_routes.insert(route.to).second) {
+          && m_data[last_sender()].direct_routes.insert(route.dest).second) {
         broadcast(route);
       }
     },
     [=](const probe_event::route_lost& route) {
       CHECK_SENDER(probe_event::new_route);
-      if (m_data[last_sender()].direct_routes.erase(route.to) > 0) {
+      if (m_data[last_sender()].direct_routes.erase(route.dest) > 0) {
         std::cout << "new route" << std::endl;
         broadcast(route);
       }

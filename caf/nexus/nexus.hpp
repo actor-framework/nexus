@@ -37,7 +37,7 @@ class nexus : public probe_event::nexus_type::base {
   void broadcast(const Data& data) {
     for (auto& l : m_listeners) {
       // we now for sure that l can handle last_dequeued()
-      send(actor_cast<actor>(l), last_sender().node(), data);
+      send(actor_cast<actor>(l), last_dequeued());
     }
   }
   void add_listener(probe_event::sink hdl);
