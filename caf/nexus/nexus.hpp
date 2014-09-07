@@ -41,14 +41,7 @@ class nexus : public probe_event::nexus_type::base {
     }
   }
   void add_listener(probe_event::sink hdl);
-  struct probe_data {
-    probe_event::node_info node;
-    optional<probe_event::ram_usage> ram;
-    optional<probe_event::work_load> load;
-    std::set<node_id> direct_routes;
-
-  };
-  std::map<actor_addr, probe_data> m_data;
+  std::map<actor_addr, probe_event::probe_data> m_data;
   std::set<probe_event::sink> m_listeners;
 };
 
