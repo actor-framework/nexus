@@ -40,9 +40,9 @@ class nexus : public probe_event::nexus_type::base {
       send(actor_cast<actor>(l), last_dequeued());
     }
   }
-  void add_listener(probe_event::sink hdl);
-  std::map<actor_addr, probe_event::probe_data> m_data;
-  std::set<probe_event::sink> m_listeners;
+  void add_listener(probe_event::listener_type hdl);
+  probe_event::probe_data_map m_data;
+  std::set<probe_event::listener_type> m_listeners;
 };
 
 } // namespace nexus

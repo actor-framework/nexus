@@ -19,41 +19,45 @@
 
 #include "caf/nexus/nexus.hpp"
 
+#include <iostream>
+
 #include "caf/all.hpp"
 #include "caf/probe_event/all.hpp"
 
-#define CHECK_SENDER(TypeName)                                                 \
-  if (!last_sender()) {                                                        \
-    std::cerr << #TypeName << " received from an invalid sender" << std::endl; \
+using std::cout;
+using std::cerr;
+using std::endl;
+
+#define CHECK_SOURCE(TypeName, VarName)                                        \
+  if (VarName.source_node == caf::invalid_node_id) {                           \
+    cerr << #TypeName << " received with invalid source node" << endl;         \
     return;                                                                    \
+  } else {                                                                     \
+    cout << "received " << #TypeName << endl;                                  \
   }                                                                            \
   static_cast<void>(0)
 
 #define HANDLE_UPDATE(TypeName, FieldName)                                     \
   [=](const TypeName& FieldName) {                                             \
     if (FieldName.source_node == caf::invalid_node_id) {                       \
-      std::cerr << #TypeName << " received from an invalid sender"             \
-                << std::endl;                                                  \
+      cerr << #TypeName << " received with invalid source node" << endl;       \
       return;                                                                  \
     }                                                                          \
-    m_data[last_sender()].FieldName = FieldName;                               \
+    cout << "received " << #TypeName << endl;                                  \
+    m_data[FieldName.source_node].FieldName = FieldName;                       \
     broadcast(FieldName);                                                      \
   }
 
 namespace caf {
 namespace nexus {
 
-void nexus::add_listener(probe_event::sink hdl) {
+void nexus::add_listener(probe_event::listener_type hdl) {
   if (m_listeners.insert(hdl).second) {
+    cout << "new listener: "
+         << to_string(actor_cast<actor>(hdl))
+         << endl;
     monitor(hdl);
-    // send initial information
-    for (auto& kvp : m_data) {
-      auto& data = kvp.second;
-      send(hdl, data.node);
-      for (auto& route : data.direct_routes) {
-        send(hdl, probe_event::new_route{data.node.source_node, route, true});
-      }
-    }
+    send(hdl, m_data);
   }
 }
 
@@ -62,42 +66,62 @@ nexus::behavior_type nexus::make_behavior() {
     HANDLE_UPDATE(probe_event::node_info, node),
     HANDLE_UPDATE(probe_event::ram_usage, ram),
     HANDLE_UPDATE(probe_event::work_load, load),
+    [=](const probe_event::actor_published& msg) {
+      CHECK_SOURCE(probe_event::actor_published, msg);
+      auto addr = msg.published_actor;
+      auto nid = msg.source_node;
+      if (addr == invalid_actor_addr) {
+        cerr << "received probe_event::actor_published "
+             << "with invalid actor address"
+             << endl;
+        return;
+      }
+      if (m_data[nid].known_actors.insert(addr).second) {
+        monitor(addr);
+      }
+      m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
+      broadcast(msg);
+    },
     [=](const probe_event::new_route& route) {
-      CHECK_SENDER(probe_event::new_route);
+      CHECK_SOURCE(probe_event::new_route, route);
       if (route.is_direct
-          && m_data[last_sender()].direct_routes.insert(route.dest).second) {
+          && m_data[route.source_node].direct_routes.insert(route.dest).second) {
         broadcast(route);
       }
     },
     [=](const probe_event::route_lost& route) {
-      CHECK_SENDER(probe_event::new_route);
-      if (m_data[last_sender()].direct_routes.erase(route.dest) > 0) {
-        std::cout << "new route" << std::endl;
+      CHECK_SOURCE(probe_event::route_lost, route);
+      if (m_data[route.source_node].direct_routes.erase(route.dest) > 0) {
+        cout << "new route" << endl;
         broadcast(route);
       }
     },
     [=](const probe_event::new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
-      CHECK_SENDER(probe_event::new_message);
-      std::cout << "new message" << std::endl;
+      CHECK_SOURCE(probe_event::new_message, msg);
+      cout << "new message" << endl;
       broadcast(msg);
     },
     [=](const probe_event::add_listener& req) {
-      //std::cout << "new listerner" << std::endl;
-      add_listener(actor_cast<probe_event::sink>(req.listener));
+      //cout << "new listerner" << endl;
+      add_listener(actor_cast<probe_event::listener_type>(req.listener));
     },
     [=](const probe_event::add_typed_listener& req) {
       add_listener(req.listener);
     },
-    /*
     [=](const down_msg& dm) {
-      if (m_listeners.erase(actor_cast<probe_event::sink>(dm.source)) == 0) {
-        // if it wasn't a listener, it must've been one of our nodes
-        // TODO: tell clients about disconnect
-        m_data.erase(dm.source);
+      if (m_listeners.erase(actor_cast<probe_event::listener_type>(dm.source)) > 0) {
+        cout << "listener " << to_string(dm.source)
+             << " exited with reason " << dm.reason
+             << endl;
+        return;
+      }
+      auto i = m_data.find(dm.source.node());
+      if (i != m_data.end() && i->second.known_actors.erase(dm.source) > 0) {
+        broadcast(dm);
+        return;
       }
     }
-    */
   };
 }
 
