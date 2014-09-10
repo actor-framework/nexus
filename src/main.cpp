@@ -21,7 +21,7 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/probe_event/all.hpp"
+#include "caf/riac/all.hpp"
 #include "caf/nexus/nexus.hpp"
 
 int main(int argc, char** argv) {
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     std::cerr << "usage: nexus PORT" << std::endl;
     return 1;
   }
-  caf::probe_event::announce_types();
+  caf::riac::announce_message_types();
   auto port = std::stoi(argv[1]);
   auto nexus = caf::spawn_typed<caf::nexus::nexus>();
   caf::io::typed_publish(nexus, static_cast<uint16_t>(port));

@@ -23,12 +23,12 @@
 #include <map>
 
 #include "caf/all.hpp"
-#include "caf/probe_event/all.hpp"
+#include "caf/riac/all.hpp"
 
 namespace caf {
 namespace nexus {
 
-class nexus : public probe_event::nexus_type::base {
+class nexus : public riac::nexus_type::base {
  public:
   behavior_type make_behavior() override;
 
@@ -40,9 +40,9 @@ class nexus : public probe_event::nexus_type::base {
       send(actor_cast<actor>(l), last_dequeued());
     }
   }
-  void add_listener(probe_event::listener_type hdl);
-  probe_event::probe_data_map m_data;
-  std::set<probe_event::listener_type> m_listeners;
+  void add_listener(riac::listener_type hdl);
+  riac::probe_data_map m_data;
+  std::set<riac::listener_type> m_listeners;
 };
 
 } // namespace nexus

@@ -22,7 +22,7 @@
 #include <iostream>
 
 #include "caf/all.hpp"
-#include "caf/probe_event/all.hpp"
+#include "caf/riac/all.hpp"
 
 using std::cout;
 using std::cerr;
@@ -51,7 +51,7 @@ using std::endl;
 namespace caf {
 namespace nexus {
 
-void nexus::add_listener(probe_event::listener_type hdl) {
+void nexus::add_listener(riac::listener_type hdl) {
   if (m_listeners.insert(hdl).second) {
     cout << "new listener: "
          << to_string(actor_cast<actor>(hdl))
@@ -63,15 +63,15 @@ void nexus::add_listener(probe_event::listener_type hdl) {
 
 nexus::behavior_type nexus::make_behavior() {
   return {
-    HANDLE_UPDATE(probe_event::node_info, node),
-    HANDLE_UPDATE(probe_event::ram_usage, ram),
-    HANDLE_UPDATE(probe_event::work_load, load),
-    [=](const probe_event::actor_published& msg) {
-      CHECK_SOURCE(probe_event::actor_published, msg);
+    HANDLE_UPDATE(riac::node_info, node),
+    HANDLE_UPDATE(riac::ram_usage, ram),
+    HANDLE_UPDATE(riac::work_load, load),
+    [=](const riac::new_actor_published& msg) {
+      CHECK_SOURCE(riac::actor_published, msg);
       auto addr = msg.published_actor;
       auto nid = msg.source_node;
       if (addr == invalid_actor_addr) {
-        cerr << "received probe_event::actor_published "
+        cerr << "received riac::actor_published "
              << "with invalid actor address"
              << endl;
         return;
@@ -82,35 +82,35 @@ nexus::behavior_type nexus::make_behavior() {
       m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
       broadcast(msg);
     },
-    [=](const probe_event::new_route& route) {
-      CHECK_SOURCE(probe_event::new_route, route);
+    [=](const riac::new_route& route) {
+      CHECK_SOURCE(riac::new_route, route);
       if (route.is_direct
           && m_data[route.source_node].direct_routes.insert(route.dest).second) {
         broadcast(route);
       }
     },
-    [=](const probe_event::route_lost& route) {
-      CHECK_SOURCE(probe_event::route_lost, route);
+    [=](const riac::route_lost& route) {
+      CHECK_SOURCE(riac::route_lost, route);
       if (m_data[route.source_node].direct_routes.erase(route.dest) > 0) {
         cout << "new route" << endl;
         broadcast(route);
       }
     },
-    [=](const probe_event::new_message& msg) {
+    [=](const riac::new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
-      CHECK_SOURCE(probe_event::new_message, msg);
+      CHECK_SOURCE(riac::new_message, msg);
       cout << "new message" << endl;
       broadcast(msg);
     },
-    [=](const probe_event::add_listener& req) {
+    [=](const riac::add_listener& req) {
       //cout << "new listerner" << endl;
-      add_listener(actor_cast<probe_event::listener_type>(req.listener));
+      add_listener(actor_cast<riac::listener_type>(req.listener));
     },
-    [=](const probe_event::add_typed_listener& req) {
+    [=](const riac::add_typed_listener& req) {
       add_listener(req.listener);
     },
     [=](const down_msg& dm) {
-      if (m_listeners.erase(actor_cast<probe_event::listener_type>(dm.source)) > 0) {
+      if (m_listeners.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
         cout << "listener " << to_string(dm.source)
              << " exited with reason " << dm.reason
              << endl;
