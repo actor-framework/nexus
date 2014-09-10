@@ -15,3 +15,5 @@ target_link_libraries(nexus
                       ${LD_FLAGS}
                       ${LIBCAF_LIBRARIES}
                       ${PTHREAD_LIBRARIES})
+
+install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/nexus DESTINATION bin)
