@@ -109,6 +109,9 @@ nexus::behavior_type nexus::make_behavior() {
     [=](const riac::add_typed_listener& req) {
       add_listener(req.listener);
     },
+    [=](const riac::node_disconnected& nd) {
+      m_data.erase(nd.source_node);
+    },
     [=](const down_msg& dm) {
       if (m_listeners.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
         cout << "listener " << to_string(dm.source)
