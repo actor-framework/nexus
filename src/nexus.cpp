@@ -48,6 +48,19 @@ using std::endl;
     broadcast(FieldName);                                                      \
   }
 
+namespace {
+
+  std::string format_down_msg(const std::string& type, const caf::down_msg& dm){
+    std::stringstream ds;
+    ds << type << " "
+       << to_string(dm.source) << " exited with reason "
+       << dm.reason;
+    return ds.str();
+  }
+
+} // namespace <anonymous>
+
+
 namespace caf {
 namespace nexus {
 
@@ -63,7 +76,18 @@ void nexus::add_listener(riac::listener_type hdl) {
 
 nexus::behavior_type nexus::make_behavior() {
   return {
-    HANDLE_UPDATE(riac::node_info, node),
+    [=](const riac::node_info& ni) {
+      if (ni.source_node == caf::invalid_node_id) {
+        cerr << "node_info received with invalid source node" << endl;
+        return;
+      }
+      cout << "received node_info " << endl;
+      m_data[ni.source_node].node = ni;
+      auto& ls = last_sender();
+      m_probes[ls] = ls.node();
+      monitor(ls);
+      broadcast(ni);
+    },
     HANDLE_UPDATE(riac::ram_usage, ram),
     HANDLE_UPDATE(riac::work_load, load),
     [=](const riac::new_actor_published& msg) {
@@ -109,21 +133,26 @@ nexus::behavior_type nexus::make_behavior() {
     [=](const riac::add_typed_listener& req) {
       add_listener(req.listener);
     },
-    [=](const riac::node_disconnected& nd) {
-      m_data.erase(nd.source_node);
-    },
     [=](const down_msg& dm) {
       if (m_listeners.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
-        cout << "listener " << to_string(dm.source)
-             << " exited with reason " << dm.reason
-             << endl;
+        cout << format_down_msg("listener", dm) << endl;
         return;
       }
-      auto i = m_data.find(dm.source.node());
-      if (i != m_data.end() && i->second.known_actors.erase(dm.source) > 0) {
-        broadcast(dm);
-        return;
+      auto probe_addr = m_probes.find(dm.source);
+      if (probe_addr != m_probes.end()) {
+        cout << format_down_msg("probe", dm) << endl;
+        riac::node_disconnected nd{probe_addr->second};
+        send(this, nd);
+        auto i = m_data.find(probe_addr->second);
+        if (i != m_data.end()
+            && i->second.known_actors.erase(probe_addr->first) > 0) {
+          return;
+        }
       }
+    },
+    [=](const riac::node_disconnected& nd) {
+      m_data.erase(nd.source_node);
+      broadcast(nd);
     }
   };
 }
