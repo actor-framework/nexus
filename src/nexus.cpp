@@ -45,7 +45,7 @@ using std::endl;
     }                                                                          \
     cout << "received " << #TypeName << endl;                                  \
     m_data[FieldName.source_node].FieldName = FieldName;                       \
-    broadcast(FieldName);                                                      \
+    broadcast();                                                      \
   }
 
 namespace {
@@ -74,6 +74,13 @@ void nexus::add_listener(riac::listener_type hdl) {
   }
 }
 
+void nexus::broadcast() {
+  for (auto& l : m_listeners) {
+    // we now for sure that l can handle last_dequeued()
+    send(actor_cast<actor>(l), last_dequeued());
+  }
+}
+
 nexus::behavior_type nexus::make_behavior() {
   return {
     [=](const riac::node_info& ni) {
@@ -86,7 +93,7 @@ nexus::behavior_type nexus::make_behavior() {
       auto& ls = last_sender();
       m_probes[ls] = ls.node();
       monitor(ls);
-      broadcast(ni);
+      broadcast();
     },
     HANDLE_UPDATE(riac::ram_usage, ram),
     HANDLE_UPDATE(riac::work_load, load),
@@ -104,27 +111,27 @@ nexus::behavior_type nexus::make_behavior() {
         monitor(addr);
       }
       m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
-      broadcast(msg);
+      broadcast();
     },
     [=](const riac::new_route& route) {
       CHECK_SOURCE(riac::new_route, route);
       if (route.is_direct
           && m_data[route.source_node].direct_routes.insert(route.dest).second) {
-        broadcast(route);
+        broadcast();
       }
     },
     [=](const riac::route_lost& route) {
       CHECK_SOURCE(riac::route_lost, route);
       if (m_data[route.source_node].direct_routes.erase(route.dest) > 0) {
         cout << "new route" << endl;
-        broadcast(route);
+        broadcast();
       }
     },
     [=](const riac::new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
       CHECK_SOURCE(riac::new_message, msg);
       cout << "new message" << endl;
-      broadcast(msg);
+      broadcast();
     },
     [=](const riac::add_listener& req) {
       //cout << "new listerner" << endl;
@@ -152,7 +159,7 @@ nexus::behavior_type nexus::make_behavior() {
     },
     [=](const riac::node_disconnected& nd) {
       m_data.erase(nd.source_node);
-      broadcast(nd);
+      broadcast();
     }
   };
 }

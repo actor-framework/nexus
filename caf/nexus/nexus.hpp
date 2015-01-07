@@ -33,13 +33,7 @@ class nexus : public riac::nexus_type::base {
   behavior_type make_behavior() override;
 
  private:
-  template<typename Data>
-  void broadcast(const Data& data) {
-    for (auto& l : m_listeners) {
-      // we now for sure that l can handle last_dequeued()
-      send(actor_cast<actor>(l), last_dequeued());
-    }
-  }
+  void broadcast();
   void add_listener(riac::listener_type hdl);
   std::map<actor_addr, node_id> m_probes;
   riac::probe_data_map m_data;
