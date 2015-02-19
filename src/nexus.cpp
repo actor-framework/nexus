@@ -77,7 +77,7 @@ void nexus::add_listener(riac::listener_type hdl) {
 void nexus::broadcast() {
   for (auto& l : m_listeners) {
     // we now for sure that l can handle last_dequeued()
-    send(actor_cast<actor>(l), last_dequeued());
+    send(actor_cast<actor>(l), current_message());
   }
 }
 
@@ -90,7 +90,7 @@ nexus::behavior_type nexus::make_behavior() {
       }
       cout << "received node_info " << endl;
       m_data[ni.source_node].node = ni;
-      auto& ls = last_sender();
+      auto& ls = current_sender();
       m_probes[ls] = ls.node();
       monitor(ls);
       broadcast();
