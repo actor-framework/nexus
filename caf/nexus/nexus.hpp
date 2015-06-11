@@ -29,15 +29,15 @@ namespace caf {
 namespace nexus {
 
 class nexus : public riac::nexus_type::base {
- public:
+public:
   behavior_type make_behavior() override;
 
- private:
+private:
   void broadcast();
   void add_listener(riac::listener_type hdl);
-  std::map<actor_addr, node_id> m_probes;
-  riac::probe_data_map m_data;
-  std::set<riac::listener_type> m_listeners;
+  std::map<actor_addr, node_id> probes_;
+  riac::probe_data_map data_;
+  std::set<riac::listener_type> listeners_;
 };
 
 } // namespace nexus

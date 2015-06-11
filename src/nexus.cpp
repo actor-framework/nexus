@@ -44,7 +44,7 @@ using std::endl;
       return;                                                                  \
     }                                                                          \
     cout << "received " << #TypeName << endl;                                  \
-    m_data[FieldName.source_node].FieldName = FieldName;                       \
+    data_[FieldName.source_node].FieldName = FieldName;                       \
     broadcast();                                                      \
   }
 
@@ -65,17 +65,17 @@ namespace caf {
 namespace nexus {
 
 void nexus::add_listener(riac::listener_type hdl) {
-  if (m_listeners.insert(hdl).second) {
+  if (listeners_.insert(hdl).second) {
     cout << "new listener: "
          << to_string(actor_cast<actor>(hdl))
          << endl;
     monitor(hdl);
-    send(hdl, m_data);
+    send(hdl, data_);
   }
 }
 
 void nexus::broadcast() {
-  for (auto& l : m_listeners) {
+  for (auto& l : listeners_) {
     // we now for sure that l can handle last_dequeued()
     send(actor_cast<actor>(l), current_message());
   }
@@ -89,9 +89,9 @@ nexus::behavior_type nexus::make_behavior() {
         return;
       }
       cout << "received node_info " << endl;
-      m_data[ni.source_node].node = ni;
+      data_[ni.source_node].node = ni;
       auto& ls = current_sender();
-      m_probes[ls] = ls.node();
+      probes_[ls] = ls.node();
       monitor(ls);
       broadcast();
     },
@@ -107,22 +107,22 @@ nexus::behavior_type nexus::make_behavior() {
              << endl;
         return;
       }
-      if (m_data[nid].known_actors.insert(addr).second) {
+      if (data_[nid].known_actors.insert(addr).second) {
         monitor(addr);
       }
-      m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
+      data_[nid].published_actors.insert(std::make_pair(addr, msg.port));
       broadcast();
     },
     [=](const riac::new_route& route) {
       CHECK_SOURCE(riac::new_route, route);
       if (route.is_direct
-          && m_data[route.source_node].direct_routes.insert(route.dest).second) {
+          && data_[route.source_node].direct_routes.insert(route.dest).second) {
         broadcast();
       }
     },
     [=](const riac::route_lost& route) {
       CHECK_SOURCE(riac::route_lost, route);
-      if (m_data[route.source_node].direct_routes.erase(route.dest) > 0) {
+      if (data_[route.source_node].direct_routes.erase(route.dest) > 0) {
         cout << "new route" << endl;
         broadcast();
       }
@@ -141,24 +141,24 @@ nexus::behavior_type nexus::make_behavior() {
       add_listener(req.listener);
     },
     [=](const down_msg& dm) {
-      if (m_listeners.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
+      if (listeners_.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
         cout << format_down_msg("listener", dm) << endl;
         return;
       }
-      auto probe_addr = m_probes.find(dm.source);
-      if (probe_addr != m_probes.end()) {
+      auto probe_addr = probes_.find(dm.source);
+      if (probe_addr != probes_.end()) {
         cout << format_down_msg("probe", dm) << endl;
         riac::node_disconnected nd{probe_addr->second};
         send(this, nd);
-        auto i = m_data.find(probe_addr->second);
-        if (i != m_data.end()
+        auto i = data_.find(probe_addr->second);
+        if (i != data_.end()
             && i->second.known_actors.erase(probe_addr->first) > 0) {
           return;
         }
       }
     },
     [=](const riac::node_disconnected& nd) {
-      m_data.erase(nd.source_node);
+      data_.erase(nd.source_node);
       broadcast();
     }
   };
