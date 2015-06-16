@@ -6,8 +6,7 @@ include_directories(. ${LIBCAF_INCLUDE_DIRS})
 file(GLOB CAF_NEXUS_HDRS "caf/nexus/*.hpp")
 
 set(CAF_NEXUS_SRCS
-    src/main.cpp
-    src/nexus.cpp)
+    src/main.cpp)
 
 add_executable(nexus ${CAF_NEXUS_SRCS} ${CAF_NEXUS_HDRS})
 

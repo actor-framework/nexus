@@ -22,17 +22,22 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 #include "caf/riac/all.hpp"
-#include "caf/nexus/nexus.hpp"
+
+using namespace caf;
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    std::cerr << "usage: nexus PORT" << std::endl;
+  uint16_t port;
+  auto r = message_builder(argv + 1, argv + argc).extract_opts({
+    {"nexus,n", "run nexus in server mode"},
+    {"probe,p", "run as probe", port}
+  });
+  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
+    std::cerr << r.error << std::endl << std::endl << r.helptext << std::endl;
     return 1;
   }
-  caf::riac::announce_message_types();
-  auto port = std::stoi(argv[1]);
-  auto nexus = caf::spawn_typed<caf::nexus::nexus>();
-  caf::io::typed_publish(nexus, static_cast<uint16_t>(port));
-  caf::await_all_actors_done();
-  caf::shutdown();
+  riac::announce_message_types();
+  auto nexus = spawn_typed<riac::nexus>();
+  io::typed_publish(nexus, static_cast<uint16_t>(port));
+  await_all_actors_done();
+  shutdown();
 }
