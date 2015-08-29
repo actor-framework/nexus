@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   riac::announce_message_types();
-  auto nexus = spawn_typed<riac::nexus>();
+  auto nexus = spawn<riac::nexus>();
   io::typed_publish(nexus, static_cast<uint16_t>(port));
   await_all_actors_done();
   shutdown();
