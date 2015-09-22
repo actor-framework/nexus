@@ -12,7 +12,9 @@ add_executable(nexus ${CAF_NEXUS_SRCS} ${CAF_NEXUS_HDRS})
 
 target_link_libraries(nexus
                       ${LD_FLAGS}
-                      ${LIBCAF_LIBRARIES}
+                      ${CAF_LIBRARY_CORE}
+                      ${CAF_LIBRARY_IO}
+                      ${CAF_LIBRARY_RIAC}
                       ${PTHREAD_LIBRARIES})
 
 install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/nexus DESTINATION bin)
