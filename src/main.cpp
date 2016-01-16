@@ -26,6 +26,9 @@
 using namespace caf;
 
 int main(int argc, char** argv) {
+  actor_system_config cfg;
+  cfg.load<io::middleman>();
+  actor_system system{cfg};
   uint16_t port;
   auto r = message_builder(argv + 1, argv + argc).extract_opts({
     {"nexus,n", "run nexus in server mode"},
@@ -35,9 +38,6 @@ int main(int argc, char** argv) {
     std::cerr << r.error << std::endl << std::endl << r.helptext << std::endl;
     return 1;
   }
-  riac::announce_message_types();
-  auto nexus = spawn<riac::nexus>(false);
-  io::typed_publish(nexus, static_cast<uint16_t>(port));
-  await_all_actors_done();
-  shutdown();
+  auto nexus = system.spawn<riac::nexus>(false);
+  system.middleman().publish(nexus, static_cast<uint16_t>(port));
 }
