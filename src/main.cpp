@@ -21,23 +21,29 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
+
 #include "caf/riac/all.hpp"
+
+using std::cout;
+using std::cerr;
+using std::endl;
 
 using namespace caf;
 
 int main(int argc, char** argv) {
-  actor_system_config cfg;
+  actor_system_config cfg{argc, argv};
   cfg.load<io::middleman>();
+  riac::add_message_types(cfg);
   actor_system system{cfg};
-  uint16_t port;
+  uint16_t port = 0;
   auto r = message_builder(argv + 1, argv + argc).extract_opts({
-    {"nexus,n", "run nexus in server mode"},
-    {"probe,p", "run as probe", port}
+    {"port,p", "bind Nexus to given port", port}
   });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    std::cerr << r.error << std::endl << std::endl << r.helptext << std::endl;
-    return 1;
-  }
+  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty())
+    return cerr << r.error << std::endl << std::endl << r.helptext << endl, 1;
   auto nexus = system.spawn<riac::nexus>(false);
-  system.middleman().publish(nexus, static_cast<uint16_t>(port));
+  auto pres = system.middleman().publish(nexus, port);
+  if (! pres)
+    return cerr << "could not bind Nexus to port " << port << endl, 1;
+  cout << "published Nexus at port " << *pres << endl;
 }
