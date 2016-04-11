@@ -42,8 +42,6 @@ int main(int argc, char** argv) {
   if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty())
     return cerr << r.error << std::endl << std::endl << r.helptext << endl, 1;
   auto nexus = system.spawn<riac::nexus>(false);
-  auto pres = system.middleman().publish(nexus, port);
-  if (! pres)
-    return cerr << "could not bind Nexus to port " << port << endl, 1;
-  cout << "published Nexus at port " << *pres << endl;
+  auto pport = system.middleman().publish(nexus, port);
+  cout << "published Nexus at port " << pport << endl;
 }
