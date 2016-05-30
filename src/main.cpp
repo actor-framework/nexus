@@ -31,8 +31,8 @@ using std::endl;
 using namespace caf;
 
 int main(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
-  cfg.load<io::middleman>();
+  actor_system_config cfg;
+  cfg.parse(argc, argv).load<io::middleman>();
   riac::add_message_types(cfg);
   actor_system system{cfg};
   uint16_t port = 0;
